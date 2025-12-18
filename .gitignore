@@ -1,348 +1,135 @@
-# ===========================================# ===========================================.DS_Store
-
+# ===========================================
 # Allmight - Git Ignore
+# ===========================================
 
-# ===========================================# Allmight - Git Ignore
-
-
-
-# ===========================================# ===========================================# Environment files (contain secrets!)
-
+# ===========================================
 # Environment & Secrets (NUNCA COMMITAR!)
-
-# ===========================================.env
-
+# ===========================================
 .env
-
-.env.local# ===========================================!.env.example
-
+.env.local
 .env.*.local
-
-*.pem# Environment & Secrets (NUNCA COMMITAR!)
-
+*.pem
 *.key
+secrets.json
 
-secrets.json# ===========================================application/cache/*
-
-
-
-# Manter o exemplo.env!application/cache/index.html
-
+# Manter o exemplo
 !.env.example
 
-.env.local
-
 # ===========================================
-
-# Sistema Operacional.env.*.localapplication/logs/*
-
+# Sistema Operacional
 # ===========================================
-
-.DS_Store*.pem!application/logs/index.html
-
+.DS_Store
 .DS_Store?
-
-._**.key
-
+._*
 .Spotlight-V100
-
-.Trashessecrets.json!application/*/.htaccess
-
+.Trashes
 ehthumbs.db
-
 Thumbs.db
-
 desktop.ini
 
-# Manter o exemplocomposer.lock
-
 # ===========================================
-
-# IDEs e Editores!.env.exampletests/mocks/database/ci_test.sqlite
-
+# IDEs e Editores
 # ===========================================
 
 # VS Code
-
 .vscode/*
-
-!.vscode/settings.json# ===========================================user_guide_src/build/*
-
+!.vscode/settings.json
 !.vscode/tasks.json
-
-!.vscode/launch.json# Sistema Operacionaluser_guide_src/cilexer/build/*
-
+!.vscode/launch.json
 !.vscode/extensions.json
 
-# ===========================================user_guide_src/cilexer/dist/*
-
 # JetBrains (PhpStorm, IntelliJ)
-
-.idea/.DS_Storeuser_guide_src/cilexer/pycilexer.egg-info/*
-
+.idea/
 *.iml
-
-*.iws.DS_Store?/vendor/
-
+*.iws
 *.ipr
 
-._*
-
 # NetBeans
-
-/nbproject/private/.Spotlight-V100# IDE Files
-
+/nbproject/private/
 /nbproject/
 
-.Trashes#-------------------------
-
 # Sublime Text
-
-*.tmlanguage.cacheehthumbs.db/nbproject/
-
+*.tmlanguage.cache
 *.tmPreferences.cache
-
-*.stTheme.cacheThumbs.db.idea/*
-
+*.stTheme.cache
 *.sublime-workspace
+*.sublime-project
 
-*.sublime-projectdesktop.ini
-
-
-
-# Eclipse## Sublime Text cache files
-
+# Eclipse
 .project
-
-.buildpath# ===========================================*.tmlanguage.cache
-
+.buildpath
 .settings/
 
-# IDEs e Editores*.tmPreferences.cache
-
 # ===========================================
-
-# CodeIgniter# ===========================================*.stTheme.cache
-
+# CodeIgniter
 # ===========================================
-
-application/cache/*# VS Code*.sublime-workspace
-
+application/cache/*
 !application/cache/index.html
-
-!application/cache/.htaccess.vscode/**.sublime-project
-
-
-
-application/logs/*!.vscode/settings.json/tests/tests/
-
-!application/logs/index.html
-
-!application/logs/.htaccess!.vscode/tasks.json/tests/results/
-
-
-
-# ===========================================!.vscode/launch.json
-
-# Composer / PHP!.vscode/extensions.json
-
-# ===========================================
-
-/vendor/# JetBrains (PhpStorm, IntelliJ)
-
-composer.lock.idea/
-
-composer.phar*.iml
-
-*.iws
-
-# ===========================================*.ipr
-
-# Node / NPM (se usar)
-
-# ===========================================# NetBeans
-
-node_modules//nbproject/private/
-
-npm-debug.log/nbproject/
-
-yarn-error.log
-
-package-lock.json# Sublime Text
-
-*.tmlanguage.cache
-
-# ===========================================*.tmPreferences.cache
-
-# Arquivos de Upload (dados do usuário)*.stTheme.cache
-
-# ===========================================*.sublime-workspace
-
-uploads/documentos/**.sublime-project
-
-!uploads/documentos/.gitkeep
-
-!uploads/documentos/index.html# Eclipse
-
-.project
-
-uploads/logos/*.buildpath
-
-!uploads/logos/.gitkeep.settings/
-
-!uploads/logos/index.html
-
-# ===========================================
-
-# ===========================================# CodeIgniter
-
-# Python - Downloads e Dados Grandes# ===========================================
-
-# ===========================================application/cache/*
-
-# Downloads de licitações (arquivos de editais, PDFs, etc.)!application/cache/index.html
-
-python/downloads_licitacoes/!application/cache/.htaccess
-
-python/downloads_licitacoes/*
+!application/cache/.htaccess
 
 application/logs/*
+!application/logs/index.html
+!application/logs/.htaccess
 
-# JSONs de exportação de licitações (muito grandes!)!application/logs/index.html
-
-python/licitacoes_*.json!application/logs/.htaccess
-
-python/*.json
+!application/*/.htaccess
 
 # ===========================================
-
-# Banco SQLite local# Composer / PHP
-
-python/*.db# ===========================================
-
-python/licitacoes.db/vendor/
-
+# Composer / PHP
+# ===========================================
+/vendor/
 composer.lock
+composer.phar
 
-# ===========================================composer.phar
-
-# Testes
-
-# ===========================================# ===========================================
-
-/tests/tests/# Node / NPM (se usar)
-
-/tests/results/# ===========================================
-
-tests/mocks/database/ci_test.sqlitenode_modules/
-
-coverage/npm-debug.log
-
-.phpunit.result.cacheyarn-error.log
-
+# ===========================================
+# Node / NPM (se usar)
+# ===========================================
+node_modules/
+npm-debug.log
+yarn-error.log
 package-lock.json
 
 # ===========================================
+# Arquivos de Upload (dados do usuário)
+# ===========================================
+uploads/documentos/*
+!uploads/documentos/.gitkeep
+!uploads/documentos/index.html
 
-# Documentação (gerada)# ===========================================
+uploads/logos/*
+!uploads/logos/.gitkeep
+!uploads/logos/index.html
 
-# ===========================================# Arquivos de Upload (dados do usuário)
-
-user_guide_src/build/*# ===========================================
-
-user_guide_src/cilexer/build/*uploads/documentos/*
-
-user_guide_src/cilexer/dist/*!uploads/documentos/.gitkeep
-
-user_guide_src/cilexer/pycilexer.egg-info/*!uploads/documentos/index.html
-
-
-
-# ===========================================uploads/logos/*
-
-# Arquivos temporários!uploads/logos/.gitkeep
-
-# ===========================================!uploads/logos/index.html
-
-*.tmp
-
-*.temp# Downloads de licitações
-
-*.bakpython/downloads_licitacoes/*
-
-*.swp!python/downloads_licitacoes/.gitkeep
-
-*~
-
-.tmp/# ===========================================
-
-temp/# Testes
+# Arquivos de licitações baixados (editais, anexos PDFs, etc.)
+uploads/licitacoes/*
+!uploads/licitacoes/.gitkeep
+!uploads/licitacoes/index.html
 
 # ===========================================
-
-# ===========================================/tests/tests/
-
-# Logs diversos/tests/results/
-
-# ===========================================tests/mocks/database/ci_test.sqlite
-
-*.logcoverage/
-
-logs/.phpunit.result.cache
-
-!application/logs/
-
+# Python - Downloads e Arquivos Gerados
 # ===========================================
 
-# ===========================================# Documentação (gerada)
+# Downloads de licitações via script Python
+python/downloads_licitacoes/*
+!python/downloads_licitacoes/.gitkeep
+downloads_licitacoes/
 
-# Python (scripts auxiliares)# ===========================================
+# JSONs de exportação (muito grandes!)
+python/licitacoes_*.json
+python/*.json
+licitacoes_*.json
+*.json
+!composer.json
+!package.json
 
-# ===========================================user_guide_src/build/*
+# Backups do script
+python/*.backup
+python/bk/*.backup
 
-__pycache__/user_guide_src/cilexer/build/*
+# Banco SQLite local
+python/*.db
+python/licitacoes.db
 
-*.py[cod]user_guide_src/cilexer/dist/*
-
-*$py.classuser_guide_src/cilexer/pycilexer.egg-info/*
-
-*.so
-
-.Python# ===========================================
-
-*.egg-info/# Arquivos temporários
-
-.eggs/# ===========================================
-
-*.egg*.tmp
-
-.venv/*.temp
-
-venv/*.bak
-
-ENV/*.swp
-
-*~
-
-# ===========================================.tmp/
-
-# Banco de Dados localtemp/
-
-# ===========================================
-
-*.db# ===========================================
-
-*.sqlite# Logs diversos
-
-*.sqlite3# ===========================================
-
-*.log
-logs/
-!application/logs/
-
-# ===========================================
-# Python (scripts auxiliares)
-# ===========================================
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -356,8 +143,50 @@ venv/
 ENV/
 
 # ===========================================
+# Testes
+# ===========================================
+/tests/tests/
+/tests/results/
+tests/mocks/database/ci_test.sqlite
+coverage/
+.phpunit.result.cache
+
+# ===========================================
+# Documentação (gerada)
+# ===========================================
+user_guide_src/build/*
+user_guide_src/cilexer/build/*
+user_guide_src/cilexer/dist/*
+user_guide_src/cilexer/pycilexer.egg-info/*
+
+# ===========================================
+# Arquivos temporários
+# ===========================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.tmp/
+temp/
+
+# ===========================================
+# Logs diversos
+# ===========================================
+*.log
+logs/
+!application/logs/
+
+# ===========================================
 # Banco de Dados local
 # ===========================================
 *.db
 *.sqlite
 *.sqlite3
+
+# Arquivo de teste de login
+test_login.php
+
+# Backups antigos
+.gitignore.old
+*.old

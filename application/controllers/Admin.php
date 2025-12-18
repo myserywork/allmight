@@ -12,8 +12,18 @@ class Admin extends CI_Controller {
         $this->load->library(['session', 'form_validation']);
         $this->load->model('Empresa_model');
         
-        // TODO: Adicionar verificação de autenticação
-        // $this->check_auth();
+        // Verificar autenticação
+        $this->check_auth();
+    }
+
+    /**
+     * Verificar se o usuário está autenticado
+     */
+    private function check_auth() {
+        if (!$this->session->userdata('logged_in')) {
+            $this->session->set_flashdata('error', 'Você precisa estar logado para acessar esta página!');
+            redirect('auth/login');
+        }
     }
 
     /**
@@ -91,6 +101,17 @@ class Admin extends CI_Controller {
         $this->load->view('templates/sidebar', $data);
         $this->load->view('admin/licitacoes/index', $data);
         $this->load->view('templates/footer', $data);
+    }
+
+    /**
+     * Licitações Abertas - Atalho com filtro automático
+     */
+    public function licitacoes_abertas() {
+        // Força o filtro de status para ABERTA
+        $_GET['status'] = 'ABERTA';
+        
+        // Chama o método principal de licitações
+        $this->licitacoes();
     }
 
     /**
@@ -1173,28 +1194,71 @@ class Admin extends CI_Controller {
     // ========================================================================
 
     private function get_dashboard_stats() {
-        return [
+        // Situações que representam licitações abertas (nomes reais da API PNCP)
+        $situacoes_abertas = [
+            'Aberta', 
+            'Divulgada no PNCP',
+            'Recebendo Proposta', 
+            'Aceite de Propostas', 
+            'Publicada', 
+            'Aguardando Propostas', 
+            'Em Disputa'
+        ];
+        
+        $stats = [
             'total_licitacoes' => $this->db->count_all('licitacoes'),
-            'licitacoes_abertas' => $this->db->where('situacao', 'Aberta')->count_all_results('licitacoes'),
+            'licitacoes_abertas' => $this->db->where_in('situacao', $situacoes_abertas)->count_all_results('licitacoes'),
             'total_empresas' => $this->db->count_all('empresas'),
             'total_matches' => $this->db->count_all('matches'),
-            'valor_total_estimado' => $this->db->select_sum('valor_estimado')->get('licitacoes')->row()->valor_estimado ?: 0,
             'propostas_em_andamento' => $this->db->where('status', 'em_elaboracao')->count_all_results('propostas')
         ];
+        
+        // Calcular valor total apenas das licitações com matches
+        $valores_matches = $this->db
+            ->select('COALESCE(NULLIF(l.valor_estimado, 0), (SELECT SUM(valor_total_estimado) FROM licitacao_itens WHERE licitacao_id = l.id)) as total', false)
+            ->from('licitacoes l')
+            ->join('matches m', 'l.id = m.licitacao_id', 'inner')
+            ->where_in('l.situacao', $situacoes_abertas)
+            ->get()
+            ->result();
+        
+        $soma_matches = 0;
+        foreach ($valores_matches as $row) {
+            $soma_matches += $row->total;
+        }
+        $stats['valor_total_estimado'] = $soma_matches;
+        
+        return $stats;
     }
 
     private function get_recent_licitacoes($limit = 5) {
-        return $this->db
-            ->select('id, numero_edital, titulo, orgao_nome, modalidade, valor_estimado, data_publicacao, situacao')
-            ->order_by('data_publicacao', 'DESC')
-            ->limit($limit)
-            ->get('licitacoes')
-            ->result();
+        $query = "
+            SELECT 
+                l.id, 
+                l.numero_edital, 
+                l.titulo, 
+                l.orgao_nome, 
+                l.modalidade, 
+                l.data_publicacao, 
+                l.situacao,
+                COALESCE(NULLIF(l.valor_estimado, 0), 
+                    (SELECT SUM(valor_total_estimado) FROM licitacao_itens WHERE licitacao_id = l.id), 0
+                ) as valor_estimado
+            FROM licitacoes l
+            WHERE l.status = 'ABERTA'
+            ORDER BY DATE(l.data_publicacao) DESC, 
+                     COALESCE(NULLIF(l.valor_estimado, 0), 
+                         (SELECT SUM(valor_total_estimado) FROM licitacao_itens WHERE licitacao_id = l.id), 0
+                     ) DESC
+            LIMIT ?
+        ";
+        
+        return $this->db->query($query, [$limit])->result();
     }
 
     private function get_top_matches($limit = 5) {
         return $this->db
-            ->select('m.*, l.titulo, l.numero_edital, e.nome as empresa_nome')
+            ->select('m.*, l.titulo, l.numero_edital, l.orgao_nome, e.nome as empresa_nome')
             ->from('matches m')
             ->join('licitacoes l', 'l.id = m.licitacao_id')
             ->join('empresas e', 'e.id = m.empresa_id')

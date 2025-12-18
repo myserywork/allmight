@@ -150,13 +150,13 @@
         <div class="border-t border-dark-700 p-4">
             <div class="flex items-center space-x-3">
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-primary-600">
-                    <span class="text-sm font-bold text-white">AD</span>
+                    <span class="text-sm font-bold text-white"><?php echo strtoupper(substr($this->session->userdata('user_name') ?? 'AD', 0, 2)); ?></span>
                 </div>
                 <div class="flex-1">
-                    <p class="text-sm font-medium text-white">Admin User</p>
-                    <p class="text-xs text-gray-400">admin@allmight.com</p>
+                    <p class="text-sm font-medium text-white"><?php echo $this->session->userdata('user_name') ?? 'Admin User'; ?></p>
+                    <p class="text-xs text-gray-400"><?php echo $this->session->userdata('user_email') ?? 'admin@allmight.com'; ?></p>
                 </div>
-                <a href="<?php echo base_url('auth/logout'); ?>" class="text-gray-400 hover:text-red-400" title="Sair">
+                <a href="<?php echo base_url('auth/logout'); ?>" class="text-gray-400 hover:text-red-400 transition-colors" title="Sair">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>
             </div>
@@ -186,23 +186,33 @@
                 <!-- Top Actions -->
                 <div class="flex items-center space-x-4">
                     <!-- Search -->
-                    <div class="relative hidden md:block">
+                    <form action="<?php echo base_url('admin/licitacoes'); ?>" method="get" class="relative hidden md:block">
                         <input type="text" 
+                               name="search"
                                placeholder="Buscar licitações..." 
-                               class="w-64 rounded-lg bg-dark-800 border border-dark-700 px-4 py-2 pl-10 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-500"></i>
-                    </div>
+                               class="w-64 rounded-lg bg-dark-800 border border-dark-700 px-4 py-2 pl-10 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                               value="<?php echo $this->input->get('search'); ?>">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-500 pointer-events-none"></i>
+                    </form>
 
                     <!-- Notifications -->
-                    <button class="relative rounded-lg p-2 text-gray-400 hover:bg-dark-800 hover:text-white">
+                    <a href="<?php echo base_url('admin/monitoramento'); ?>" class="relative rounded-lg p-2 text-gray-400 hover:bg-dark-800 hover:text-white">
                         <i class="fas fa-bell text-xl"></i>
-                        <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">3</span>
-                    </button>
+                        <?php
+                        // Buscar contador de alertas novos
+                        $CI =& get_instance();
+                        $CI->load->model('Alerta_model');
+                        $alertas_novos = $CI->Alerta_model->count_novos();
+                        if ($alertas_novos > 0):
+                        ?>
+                        <span class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"><?php echo $alertas_novos; ?></span>
+                        <?php endif; ?>
+                    </a>
 
                     <!-- Quick Actions -->
-                    <button class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 neon-glow">
+                    <a href="<?php echo base_url('admin/analises'); ?>" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 neon-glow inline-block">
                         <i class="fas fa-plus mr-2"></i>Nova Análise
-                    </button>
+                    </a>
                 </div>
             </div>
         </header>

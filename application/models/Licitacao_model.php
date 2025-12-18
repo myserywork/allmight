@@ -219,19 +219,42 @@ class Licitacao_model extends CI_Model {
     public function get_stats() {
         $total = $this->db->count_all('licitacoes');
         
-        $abertas = $this->db->where('status', 'ABERTA')
+        // Situações que representam licitações abertas (mesma lógica do dashboard)
+        $situacoes_abertas = [
+            'Aberta', 
+            'Divulgada no PNCP',
+            'Recebendo Proposta', 
+            'Aceite de Propostas', 
+            'Publicada', 
+            'Aguardando Propostas', 
+            'Em Disputa'
+        ];
+        
+        $abertas = $this->db->where_in('situacao', $situacoes_abertas)
             ->count_all_results('licitacoes');
         
+        // Em andamento = que já tem propostas sendo elaboradas
         $em_andamento = $this->db->where('status', 'EM_ANDAMENTO')
             ->count_all_results('licitacoes');
         
-        $encerradas = $this->db->where('status', 'ENCERRADA')
+        // Encerradas = revogadas, anuladas, suspensas, finalizadas
+        $situacoes_encerradas = ['Revogada', 'Anulada', 'Suspensa', 'Encerrada', 'Finalizada', 'Homologada'];
+        $encerradas = $this->db->where_in('situacao', $situacoes_encerradas)
             ->count_all_results('licitacoes');
         
-        $valor_total = $this->db->select_sum('valor_estimado')
-            ->get('licitacoes')
-            ->row()
-            ->valor_estimado ?: 0;
+        // Calcular valor total apenas das licitações com matches
+        $valores_matches = $this->db
+            ->select('COALESCE(NULLIF(l.valor_estimado, 0), (SELECT SUM(valor_total_estimado) FROM licitacao_itens WHERE licitacao_id = l.id)) as total', false)
+            ->from('licitacoes l')
+            ->join('matches m', 'l.id = m.licitacao_id', 'inner')
+            ->where_in('l.situacao', $situacoes_abertas)
+            ->get()
+            ->result();
+        
+        $valor_total = 0;
+        foreach ($valores_matches as $row) {
+            $valor_total += $row->total;
+        }
         
         // Por UF (top 10)
         $por_uf = $this->db->select('uf, COUNT(*) as total')

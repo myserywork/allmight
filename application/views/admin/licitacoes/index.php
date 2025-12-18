@@ -56,10 +56,6 @@
                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all <?php echo ($filters['status'] ?? '') === 'ABERTA' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-700'; ?>">
                         <i class="fas fa-door-open mr-1"></i>Abertas
                     </a>
-                    <a href="<?php echo base_url('admin/licitacoes?status=EM_ANDAMENTO'); ?>" 
-                       class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all <?php echo ($filters['status'] ?? '') === 'EM_ANDAMENTO' ? 'bg-yellow-600 text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-700'; ?>">
-                        <i class="fas fa-hourglass-half mr-1"></i>Em Andamento
-                    </a>
                     <a href="<?php echo base_url('admin/licitacoes?order_by=valor_desc'); ?>" 
                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all <?php echo ($filters['order_by'] ?? '') === 'valor_desc' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-gray-700'; ?>">
                         <i class="fas fa-dollar-sign mr-1"></i>Maior Valor
@@ -140,19 +136,6 @@
                 </div>
             </a>
             
-            <!-- Em Andamento -->
-            <a href="<?php echo base_url('admin/licitacoes?status=EM_ANDAMENTO'); ?>" 
-               class="glass rounded-2xl p-5 border border-gray-700 hover:border-yellow-500/50 transition-all group cursor-pointer <?php echo ($filters['status'] ?? '') === 'EM_ANDAMENTO' ? 'ring-2 ring-yellow-500' : ''; ?>">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Em Andamento</p>
-                        <p class="text-2xl font-bold text-yellow-400 mt-1"><?php echo number_format($stats['em_andamento']); ?></p>
-                    </div>
-                    <div class="p-3 rounded-xl bg-yellow-500/20 group-hover:bg-yellow-500/30 transition-colors">
-                        <i class="fas fa-hourglass-half text-xl text-yellow-400"></i>
-                    </div>
-                </div>
-            </a>
             
             <!-- Encerradas -->
             <a href="<?php echo base_url('admin/licitacoes?status=ENCERRADA'); ?>" 
@@ -183,13 +166,13 @@
             </a>
             
             <!-- Valor Total -->
-            <div class="glass rounded-2xl p-5 border border-gray-700 col-span-2 md:col-span-1">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Valor Total</p>
-                        <p class="text-xl font-bold text-emerald-400 mt-1"><?php echo format_currency($stats['valor_total']); ?></p>
+            <div class="glass rounded-2xl p-5 border border-gray-700 col-span-2">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Valor Estimado Total [Matches]</p>
+                        <p class="text-2xl font-bold text-emerald-400 truncate"><?php echo format_currency($stats['valor_total']); ?></p>
                     </div>
-                    <div class="p-3 rounded-xl bg-emerald-500/20">
+                    <div class="p-3 rounded-xl bg-emerald-500/20 flex-shrink-0">
                         <i class="fas fa-coins text-xl text-emerald-400"></i>
                     </div>
                 </div>

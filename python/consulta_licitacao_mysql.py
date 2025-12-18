@@ -39,6 +39,7 @@ tempo_inicio = time.time()
 DELAY_ENTRE_REQUESTS = 0.1  # segundos entre cada request
 MAX_THREADS = 20  # Número máximo de threads paralelas
 MAX_DOWNLOAD_THREADS = 30  # Threads dedicadas para downloads
+MAX_LICITACAO_THREADS = 10  # Threads para processar licitações dentro de um estado
 FAZER_DOWNLOAD_ARQUIVOS = True  # True = baixar arquivos, False = só salvar info no banco
 PASTA_DOWNLOADS = "downloads_licitacoes"  # Pasta raiz para downloads
 DOWNLOAD_TIMEOUT = 30  # Timeout de download em segundos
@@ -48,6 +49,9 @@ db_lock = threading.Lock()
 
 # Pool de threads dedicado para downloads
 download_executor = None  # Será inicializado depois
+
+# Pool de threads para processar licitações
+licitacao_executor = None  # Será inicializado depois
 
 # ID da fonte PNCP (será buscado do banco)
 FONTE_PNCP_ID = None
@@ -141,11 +145,14 @@ if arquivos_hoje:
     print("\n✓ Continuando com nova coleta...\n")
 
 # ============================================================================
-# INICIALIZAR POOL DE THREADS PARA DOWNLOADS
+# INICIALIZAR POOL DE THREADS PARA DOWNLOADS E LICITAÇÕES
 # ============================================================================
 if FAZER_DOWNLOAD_ARQUIVOS:
     download_executor = ThreadPoolExecutor(max_workers=MAX_DOWNLOAD_THREADS, thread_name_prefix="Download")
     print(f"✓ Pool de downloads inicializado: {MAX_DOWNLOAD_THREADS} threads paralelas")
+
+licitacao_executor = ThreadPoolExecutor(max_workers=MAX_LICITACAO_THREADS, thread_name_prefix="Licitacao")
+print(f"✓ Pool de processamento de licitações inicializado: {MAX_LICITACAO_THREADS} threads paralelas")
 
 # ============================================================================
 # FUNÇÕES PARA BUSCAR DADOS DETALHADOS NA API
@@ -401,9 +408,6 @@ def popular_licitacao_no_banco(licitacao, itens, arquivos, historico):
         try:
             cursor = conn.cursor()
             
-            # Gerar ID único para a licitação
-            licitacao_uuid = str(uuid.uuid4())
-            
             # Detectar se é da API de busca ou detalhes
             # API de busca tem: orgao_cnpj, ano, numero_sequencial
             # API de detalhes tem: orgaoEntidade.cnpj, anoCompra, sequencialCompra
@@ -461,6 +465,22 @@ def popular_licitacao_no_banco(licitacao, itens, arquivos, historico):
             # URLs
             url_navegador = f"https://pncp.gov.br/app/editais/{cnpj}/{ano}/{sequencial}"
             
+            # Verificar se a licitação já existe no banco
+            cursor.execute("SELECT id FROM licitacoes WHERE id_externo = %s", (id_externo,))
+            licitacao_existente = cursor.fetchone()
+            
+            if licitacao_existente:
+                # Usar ID existente
+                licitacao_uuid = licitacao_existente[0]
+                
+                # Limpar dados antigos (serão reinseridos com dados atualizados)
+                cursor.execute("DELETE FROM licitacao_itens WHERE licitacao_id = %s", (licitacao_uuid,))
+                cursor.execute("DELETE FROM licitacao_arquivos WHERE licitacao_id = %s", (licitacao_uuid,))
+                cursor.execute("DELETE FROM licitacao_historico WHERE licitacao_id = %s", (licitacao_uuid,))
+            else:
+                # Gerar novo ID
+                licitacao_uuid = str(uuid.uuid4())
+            
             # Inserir licitação principal
             sql_licitacao = """
                 INSERT INTO licitacoes (
@@ -496,6 +516,19 @@ def popular_licitacao_no_banco(licitacao, itens, arquivos, historico):
                     data_atualizacao = VALUES(data_atualizacao)
             """
             
+            # Mapear situação do PNCP para status do sistema
+            # Situações da API: "Recebendo Proposta", "Aceite de Propostas", etc.
+            # Dashboard usa: 'Aberta', 'Encerrada', 'Cancelada'
+            status_mapeado = "Aberta"  # Padrão
+            if situacao_nome:
+                situacao_lower = situacao_nome.lower()
+                if "recebendo" in situacao_lower or "aceite" in situacao_lower or "proposta" in situacao_lower:
+                    status_mapeado = "Aberta"
+                elif "finalizada" in situacao_lower or "encerrada" in situacao_lower or "homolog" in situacao_lower:
+                    status_mapeado = "Encerrada"
+                elif "suspensa" in situacao_lower or "cancelada" in situacao_lower:
+                    status_mapeado = "Cancelada"
+            
             valores_licitacao = (
                 licitacao_uuid,
                 FONTE_PNCP_ID,
@@ -512,9 +545,9 @@ def popular_licitacao_no_banco(licitacao, itens, arquivos, historico):
                 municipio_nome,
                 modalidade_nome,
                 modalidade_id,
-                situacao_nome,
+                status_mapeado,  # Coluna 'situacao' usa status mapeado (ex: "Aberta")
                 situacao_id,
-                "ABERTA",  # Status padrão
+                status_mapeado,  # Coluna 'status' usa mesmo valor
                 data_publicacao,
                 data_inicio,
                 data_fim,
@@ -773,6 +806,56 @@ else:
 print("="*70)
 
 # ============================================================================
+# FUNÇÃO PARA PROCESSAR UMA ÚNICA LICITAÇÃO
+# ============================================================================
+
+def processar_licitacao(lic, uf):
+    """Processa uma única licitação (busca detalhes, itens, arquivos e salva no banco)"""
+    try:
+        # Extrair dados básicos da API de busca
+        cnpj = lic.get("orgao_cnpj")
+        ano = lic.get("ano")
+        sequencial = lic.get("numero_sequencial")
+        
+        if not all([cnpj, ano, sequencial]):
+            return False, "dados_invalidos"
+        
+        # Buscar dados detalhados da licitação
+        detalhes = buscar_detalhes_licitacao(cnpj, ano, sequencial)
+        
+        # Se não tem detalhes, usar os dados da busca
+        dados_para_salvar = detalhes if detalhes else lic
+        
+        # Buscar itens, arquivos e histórico
+        itens = buscar_itens_licitacao(cnpj, ano, sequencial)
+        arquivos = buscar_arquivos_licitacao(cnpj, ano, sequencial)
+        historico = buscar_historico_licitacao(cnpj, ano, sequencial)
+        
+        # Organizar downloads (assíncrono)
+        if arquivos:
+            titulo = dados_para_salvar.get("objetoCompra") or dados_para_salvar.get("title") or "Sem_Titulo"
+            organizar_arquivos_licitacao(
+                None,  # ID será gerado ao salvar
+                cnpj,
+                ano,
+                sequencial,
+                titulo[:50],
+                arquivos
+            )
+        
+        # Salvar no banco
+        sucesso = popular_licitacao_no_banco(dados_para_salvar, itens, arquivos, historico)
+        
+        if sucesso:
+            return True, detalhes
+        else:
+            return False, "erro_salvar"
+            
+    except Exception as e:
+        return False, str(e)
+
+
+# ============================================================================
 # FUNÇÃO PARA COLETAR DADOS DE UM ESTADO (THREAD)
 # ============================================================================
 
@@ -811,63 +894,37 @@ def coletar_estado(uf, estatistica):
                 if not items:
                     break
                 
-                print(f"  [{uf}] Página {pagina}/{total_paginas} - {len(items)} licitações", end="")
+                print(f"  [{uf}] Página {pagina}/{total_paginas} - {len(items)} licitações", end="", flush=True)
                 
-                # Processar cada licitação
+                # Processar licitações em paralelo
                 salvos = 0
                 erros = 0
+                
+                # Submeter todas as licitações para processamento paralelo
+                futures = []
                 for lic in items:
+                    future = licitacao_executor.submit(processar_licitacao, lic, uf)
+                    futures.append(future)
+                
+                # Aguardar resultados
+                for future in as_completed(futures):
                     try:
-                        # Extrair dados básicos da API de busca
-                        cnpj = lic.get("orgao_cnpj")
-                        ano = lic.get("ano")
-                        sequencial = lic.get("numero_sequencial")
-                        
-                        if not all([cnpj, ano, sequencial]):
-                            print(f"X", end="")
-                            erros += 1
-                            continue
-                        
-                        print(f".", end="", flush=True)
-                        
-                        # Buscar dados detalhados da licitação (opcional)
-                        detalhes = buscar_detalhes_licitacao(cnpj, ano, sequencial)
-                        
-                        # Se não tem detalhes, usar os dados da busca
-                        dados_para_salvar = detalhes if detalhes else lic
-                        
-                        # Buscar itens, arquivos e histórico
-                        itens = buscar_itens_licitacao(cnpj, ano, sequencial)
-                        arquivos = buscar_arquivos_licitacao(cnpj, ano, sequencial)
-                        historico = buscar_historico_licitacao(cnpj, ano, sequencial)
-                        
-                        # Organizar downloads (assíncrono)
-                        if arquivos:
-                            titulo = dados_para_salvar.get("objetoCompra") or dados_para_salvar.get("title") or "Sem_Titulo"
-                            organizar_arquivos_licitacao(
-                                None,  # ID será gerado ao salvar
-                                cnpj,
-                                ano,
-                                sequencial,
-                                titulo[:50],
-                                arquivos
-                            )
-                        
-                        # Salvar no banco
-                        sucesso = popular_licitacao_no_banco(dados_para_salvar, itens, arquivos, historico)
-                        
+                        sucesso, resultado = future.result()
                         if sucesso:
-                            licitacoes_estado.append(detalhes)
+                            licitacoes_estado.append(resultado)
                             salvos += 1
                             print(f"✓", end="", flush=True)
                         else:
-                            print(f"✗", end="", flush=True)
                             erros += 1
-                        
+                            if resultado == "dados_invalidos":
+                                print(f"X", end="", flush=True)
+                            elif resultado == "erro_salvar":
+                                print(f"✗", end="", flush=True)
+                            else:
+                                print(f"!", end="", flush=True)
                     except Exception as e:
                         print(f"!", end="", flush=True)
                         erros += 1
-                        continue
                 
                 print(f" -> {salvos} OK, {erros} erros")
                 time.sleep(DELAY_ENTRE_REQUESTS)
@@ -896,6 +953,7 @@ def coletar_estado(uf, estatistica):
 print(f"\n{'='*70}")
 print(f"INICIANDO COLETA PARALELA")
 print(f"Threads: {MAX_THREADS} estados simultâneos")
+print(f"Processamento: {MAX_LICITACAO_THREADS} licitações paralelas por estado")
 print(f"Download: {MAX_DOWNLOAD_THREADS} arquivos simultâneos")
 print(f"{'='*70}\n")
 
@@ -954,10 +1012,53 @@ if download_executor:
     download_executor.shutdown(wait=True)
     print(f"✓ Todos os downloads concluídos!")
 
+# ============================================================================
+# MARCAR LICITAÇÕES ENCERRADAS AUTOMATICAMENTE
+# ============================================================================
+print(f"\n{'='*70}")
+print("🔄 ATUALIZANDO STATUS DE LICITAÇÕES ENCERRADAS")
+print(f"{'='*70}")
+
+try:
+    conn = criar_conexao()
+    if conn:
+        cursor = conn.cursor()
+        
+        # Marcar como encerradas as licitações que:
+        # 1. Têm data de encerramento de propostas no passado (já fecharam)
+        # 2. Ou não foram atualizadas há mais de 2 dias (saíram da API)
+        sql_encerrar = """
+            UPDATE licitacoes 
+            SET situacao = 'Encerrada', 
+                status = 'ENCERRADA' 
+            WHERE situacao IN ('Divulgada no PNCP', 'Aberta', 'Recebendo Proposta', 'Aceite de Propostas', 'Publicada', 'Aguardando Propostas', 'Em Disputa')
+            AND (
+                data_encerramento_proposta < NOW()
+                OR data_atualizacao < DATE_SUB(NOW(), INTERVAL 2 DAY)
+            )
+        """
+        
+        cursor.execute(sql_encerrar)
+        licitacoes_encerradas = cursor.rowcount
+        conn.commit()
+        
+        print(f"✓ {licitacoes_encerradas} licitações marcadas como encerradas")
+        print(f"  - Critério: data de encerramento passou OU não atualizadas há +2 dias")
+        
+        cursor.close()
+        conn.close()
+    else:
+        print("⚠️  Não foi possível conectar ao banco para atualizar status")
+        
+except Exception as e:
+    print(f"⚠️  Erro ao atualizar status: {e}")
+
+print(f"{'='*70}")
+
 print(f"\n{'='*70}")
 print("🎉 PROCESSO COMPLETO!")
 print(f"{'='*70}")
-print(f"📊 Banco MySQL: {len(todas_licitacoes)} licitações")
+print(f"📊 Banco MySQL: {len(todas_licitacoes)} licitações coletadas")
 print(f"💾 Backup JSON: {nome_arquivo}")
 print(f"📁 Downloads: {PASTA_DOWNLOADS}/")
 print(f"{'='*70}\n")

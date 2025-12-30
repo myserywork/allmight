@@ -13,8 +13,8 @@
         <!-- Logo -->
         <div class="flex h-20 items-center justify-between border-b border-dark-700 px-6">
             <div class="flex items-center space-x-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 neon-glow">
-                    <i class="fas fa-bolt text-2xl text-white"></i>
+                <div class="flex h-12 w-12 items-center justify-center">
+                    <img src="<?php echo base_url('logo.png'); ?>" alt="AllMight Logo" class="w-12 h-12 object-contain">
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">

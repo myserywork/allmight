@@ -184,6 +184,15 @@ logs/
 *.sqlite
 *.sqlite3
 
+# SQL exports grandes (manter apenas esquemas pequenos)
+sql/*completo*.sql
+sql/*backup*.sql
+sql/*dump*.sql
+sql/*export*.sql
+# Permitir apenas esquemas e usuários pequenos
+!sql/*schema*.sql
+!sql/*usuarios*.sql
+
 # Arquivo de teste de login
 test_login.php
 
